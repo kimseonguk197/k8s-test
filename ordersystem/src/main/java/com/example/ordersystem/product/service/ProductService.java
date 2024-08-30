@@ -53,7 +53,7 @@ public class ProductService {
         try{
             product =  productRepository.save(dto.toEntity());
             byte[] bytes = image.getBytes();
-            Path path = Paths.get("C:/Users/Playdata/Desktop/tmp/",
+            Path path = Paths.get("/tmp/",
                     product.getId() + "_" +image.getOriginalFilename());
             Files.write(path, bytes, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
             product.updateImagePath(path.toString());
@@ -68,36 +68,6 @@ public class ProductService {
     }
 
 
-    
-    public Product productAwsCreate(ProductSaveReqDto dto) {
-        MultipartFile image = dto.getProductImage();
-        Product product = null;
-        try {
-            // 데이터베이스에 상품 저장
-            product = productRepository.save(dto.toEntity());
-    
-            // 이미지 파일 이름 생성
-            String fileName = product.getId() + "_" + image.getOriginalFilename();
-    
-            // AWS S3에 직접 업로드
-            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                    .bucket(bucket)
-                    .key(fileName)
-                    .build();
-            // MultipartFile에서 InputStream을 사용하여 S3에 바로 업로드
-            PutObjectResponse putObjectResponse = s3Client.putObject(
-                    putObjectRequest,
-                    RequestBody.fromInputStream(image.getInputStream(), image.getSize())
-            );
-    
-            // 업로드된 이미지의 S3 URL 얻기
-            String s3Path = s3Client.utilities().getUrl(a -> a.bucket(bucket).key(fileName)).toExternalForm();
-            product.updateImagePath(s3Path);
-        } catch (IOException e) {
-            throw new RuntimeException("이미지 저장 실패", e);
-        }
-        return product;
-    }
     
     public Page<ProductResDto> productList(ProductSearchDto searchDto, Pageable pageable){
 //        검색을 위해 Specification 객체 사용
