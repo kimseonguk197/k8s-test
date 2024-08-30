@@ -68,30 +68,37 @@ public class ProductService {
     }
 
 
-    public Product productAwsCreate(ProductSaveReqDto dto){
+    
+    public Product productAwsCreate(ProductSaveReqDto dto) {
         MultipartFile image = dto.getProductImage();
         Product product = null;
-        try{
-            product =  productRepository.save(dto.toEntity());
-            byte[] bytes = image.getBytes();
-            String fileName = product.getId() + "_" +image.getOriginalFilename();
-            Path path = Paths.get("/tmp/", fileName);
-//            local pc에 임시 저장
-            Files.write(path, bytes, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
-
-//            aws에 pc에 저장된 파일을 업로드
+        try {
+            // 데이터베이스에 상품 저장
+            product = productRepository.save(dto.toEntity());
+    
+            // 이미지 파일 이름 생성
+            String fileName = product.getId() + "_" + image.getOriginalFilename();
+    
+            // AWS S3에 직접 업로드
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(bucket)
                     .key(fileName)
                     .build();
-            PutObjectResponse putObjectResponse = s3Client.putObject(putObjectRequest, RequestBody.fromFile(path));
-            String s3Path = s3Client.utilities().getUrl(a->a.bucket(bucket).key(fileName)).toExternalForm();
+            // MultipartFile에서 InputStream을 사용하여 S3에 바로 업로드
+            PutObjectResponse putObjectResponse = s3Client.putObject(
+                    putObjectRequest,
+                    RequestBody.fromInputStream(image.getInputStream(), image.getSize())
+            );
+    
+            // 업로드된 이미지의 S3 URL 얻기
+            String s3Path = s3Client.utilities().getUrl(a -> a.bucket(bucket).key(fileName)).toExternalForm();
             product.updateImagePath(s3Path);
-        }catch (IOException e){
-            throw new RuntimeException("이미지 저장 실패");
+        } catch (IOException e) {
+            throw new RuntimeException("이미지 저장 실패", e);
         }
-        return  product;
+        return product;
     }
+    
     public Page<ProductResDto> productList(ProductSearchDto searchDto, Pageable pageable){
 //        검색을 위해 Specification 객체 사용
 //        Specification객체는 복잡한 쿼리를 명세를 이용하여 정의하는 방식으로, 쿼리를 쉽게 생성
