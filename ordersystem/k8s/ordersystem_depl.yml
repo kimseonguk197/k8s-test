@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: ordersystem
-        # aws의 ecr 주소 사용
+        # aws의 ecr 주소 사용 
           image: 346903264902.dkr.ecr.ap-northeast-2.amazonaws.com/seonguk-ordersystem:latest
           ports: 
           - containerPort: 8080
