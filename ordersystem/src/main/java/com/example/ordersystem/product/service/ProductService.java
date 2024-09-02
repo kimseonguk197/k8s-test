@@ -46,7 +46,30 @@ public class ProductService {
         this.stockInventoryService = stockInventoryService;
         this.s3Client = s3Client;
     }
-
+    public Product productAwsCreate(ProductSaveReqDto dto) {
+        MultipartFile image = dto.getProductImage();
+        Product product = null;
+        try {
+            product =  productRepository.save(dto.toEntity());
+            byte[] bytes = image.getBytes();
+            String fileName = product.getId() + "_" +image.getOriginalFilename();
+            Path path = Paths.get("/tmp/", fileName);
+//            local pc에 임시 저장
+            Files.write(path, bytes, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+            // AWS S3에 직접 업로드
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(fileName)
+                    .build();
+            // 업로드된 이미지의 S3 URL 얻기
+            s3Client.putObject(putObjectRequest, RequestBody.fromFile(path));
+            String s3Path = s3Client.utilities().getUrl(a->a.bucket(bucket).key(fileName)).toExternalForm();
+            product.updateImagePath(s3Path);
+        } catch (IOException e) {
+            throw new RuntimeException("이미지 저장 실패", e);
+        }
+        return product;
+    }
     public Product productCreate(ProductSaveReqDto dto){
         MultipartFile image = dto.getProductImage();
         Product product = null;
